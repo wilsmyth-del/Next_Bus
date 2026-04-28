@@ -1,0 +1,23 @@
+# Environment
+.env
+
+# Database files
+*.db
+
+# Python virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+logs/
+*.log
+
+# GTFS data (large binary, not version-controlled)
+*.zip
+
+# Scratch / prototype files
+poc.py

@@ -1,0 +1,13 @@
+[Unit]
+Description=Translink Next Bus App
+After=network.target
+
+[Service]
+User=wil
+WorkingDirectory=/mnt/build_space/transit_poc
+ExecStart=/mnt/build_space/transit_poc/venv/bin/gunicorn -w 1 -b 0.0.0.0:5004 app:app
+Restart=on-failure
+EnvironmentFile=/mnt/build_space/transit_poc/.env
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Next Bus">
+  <title>Next Bus</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:         #0f1117;
+      --surface:    #1a1d27;
+      --surface2:   #22263a;
+      --border:     #2e3248;
+      --accent:     #4f8ef7;
+      --accent-dim: #3a6bbf;
+      --danger:     #e05252;
+      --text:       #e8eaf0;
+      --text-dim:   #8b90a8;
+      --green:      #4caf82;
+      --yellow:     #e0b84f;
+      --radius:     12px;
+      --tap:        48px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.4;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header h1 span {
+      color: var(--accent);
+    }
+
+    /* ── Tab nav ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: var(--tap);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .tab-btn.active {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .tab-btn:active {
+      opacity: 0.7;
+    }
+
+    /* ── Main content ── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Stop card ── */
+    .stop-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .stop-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 8px 4px 16px;
+      min-height: 60px;
+    }
+
+    .stop-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      padding: 12px 0;
+      min-height: var(--tap);
+    }
+
+    .stop-btn:active {
+      opacity: 0.7;
+    }
+
+    .stop-id-badge {
+      font-size: 12px;
+      color: var(--text-dim);
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 18px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .delete-btn:hover, .delete-btn:active {
+      color: var(--danger);
+      background: rgba(224, 82, 82, 0.1);
+    }
+
+    /* ── Bus results inline ── */
+    .bus-results {
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      display: none;
+    }
+
+    .bus-results.open { display: block; }
+
+    .bus-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bus-row:last-child { border-bottom: none; }
+
+    .bus-route {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 52px;
+    }
+
+    .bus-time {
+      font-size: 15px;
+      color: var(--text);
+      flex: 1;
+      padding: 0 12px;
+    }
+
+    .bus-mins {
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
+
+    .bus-mins.soon  { background: rgba(224, 184, 79, 0.15); color: var(--yellow); }
+    .bus-mins.ok    { background: rgba(76, 175, 130, 0.15); color: var(--green); }
+    .bus-mins.later { background: var(--surface2); color: var(--text-dim); }
+
+    .bus-source {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      padding: 2px 7px;
+      border-radius: 5px;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+    .bus-source.approx    { color: var(--yellow); background: rgba(224,184,79,0.12); }
+    .bus-source.scheduled { color: var(--text-dim); background: var(--surface2); }
+
+    .bus-loading, .bus-error, .bus-empty {
+      padding: 12px 0;
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    .bus-error { color: var(--danger); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 24px 40px;
+      color: var(--text-dim);
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state p {
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .empty-state strong {
+      color: var(--text);
+    }
+
+    /* ── Search view ── */
+    .search-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 18px;
+      padding: 0 16px;
+      height: 52px;
+      outline: none;
+      -webkit-appearance: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .search-btn {
+      height: 52px;
+      padding: 0 20px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .search-btn:active { background: var(--accent-dim); }
+    .search-btn:disabled {
+      background: var(--surface2);
+      color: var(--text-dim);
+      cursor: not-allowed;
+    }
+
+    /* ── Search results ── */
+    .search-results {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .search-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .search-stop-id {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .star-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 14px;
+      cursor: pointer;
+      min-height: var(--tap);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .star-btn:hover, .star-btn:active {
+      background: rgba(79, 142, 247, 0.15);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .star-btn.starred {
+      color: var(--yellow);
+      border-color: var(--yellow);
+      background: rgba(224, 184, 79, 0.1);
+    }
+
+    .search-results .bus-row {
+      padding: 10px 16px;
+    }
+
+    /* ── Label prompt overlay ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .prompt-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .prompt-box h2 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .prompt-box p {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 18px;
+    }
+
+    .prompt-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 17px;
+      padding: 12px 14px;
+      outline: none;
+      margin-bottom: 16px;
+      -webkit-appearance: none;
+      transition: border-color 0.15s;
+    }
+
+    .prompt-input:focus { border-color: var(--accent); }
+
+    .prompt-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .prompt-cancel {
+      flex: 1;
+      height: var(--tap);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-dim);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .prompt-save {
+      flex: 2;
+      height: var(--tap);
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .prompt-save:active { background: var(--accent-dim); }
+    .prompt-save:disabled {
+      background: var(--surface2);
+      color: var(--text-dim);
+      cursor: not-allowed;
+    }
+
+    /* ── Settings view ── */
+    .settings-panel {
+      padding: 4px 0;
+    }
+
+    .settings-heading {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .settings-hint {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .settings-hint code {
+      font-family: monospace;
+      background: var(--surface2);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    .settings-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    #settings-feedback {
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .settings-ok   { color: var(--green); }
+    .settings-err  { color: var(--danger); }
+
+    #key-status {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+      min-height: 20px;
+    }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <h1>Next <span>Bus</span></h1>
+    <nav class="tabs">
+      <button class="tab-btn active" data-view="home">Stops</button>
+      <button class="tab-btn" data-view="search">Search</button>
+      <button class="tab-btn" data-view="settings">Settings</button>
+    </nav>
+  </header>
+
+  <main class="main">
+
+    <!-- HOME VIEW -->
+    <section id="view-home" class="view active">
+      <div id="stops-list"></div>
+    </section>
+
+    <!-- SETTINGS VIEW -->
+    <section id="view-settings" class="view">
+      <div class="settings-panel">
+        <h2 class="settings-heading">TransLink API Key</h2>
+        <p class="settings-hint">Enter your API key from the TransLink developer portal. The key is stored in <code>.env</code> and used immediately.</p>
+        <div id="key-status"></div>
+        <div class="settings-form">
+          <input
+            class="search-input"
+            id="api-key-input"
+            type="password"
+            placeholder="Paste API key here"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          >
+          <button class="search-btn" id="api-key-save-btn">Save</button>
+        </div>
+        <div id="settings-feedback" aria-live="polite"></div>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 28px 0 24px;">
+
+        <h2 class="settings-heading">GTFS Data</h2>
+        <p class="settings-hint">Check for a newer GTFS schedule from TransLink and update the local database if one is available.</p>
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <button class="search-btn" id="gtfs-update-btn" style="height: 48px; padding: 0 20px;">Update GTFS Data</button>
+          <span id="gtfs-status" aria-live="polite" style="font-size: 14px;"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEARCH VIEW -->
+    <section id="view-search" class="view">
+      <div class="search-form">
+        <input
+          class="search-input"
+          id="search-input"
+          type="number"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          placeholder="Stop number"
+          autocomplete="off"
+        >
+        <button class="search-btn" id="search-btn">Go</button>
+      </div>
+      <div id="search-results-area"></div>
+    </section>
+
+  </main>
+
+  <!-- Label prompt overlay -->
+  <div class="overlay" id="label-overlay" role="dialog" aria-modal="true" aria-labelledby="prompt-title">
+    <div class="prompt-box">
+      <h2 id="prompt-title">Name this stop</h2>
+      <p id="prompt-subtitle">Stop <span id="prompt-stop-id"></span></p>
+      <input
+        class="prompt-input"
+        id="prompt-label-input"
+        type="text"
+        placeholder="e.g. Home, Work, Gym"
+        maxlength="40"
+        autocomplete="off"
+      >
+      <div class="prompt-actions">
+        <button class="prompt-cancel" id="prompt-cancel">Cancel</button>
+        <button class="prompt-save" id="prompt-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────────────
+let stars = [];
+let openCardId = null;     // stop_id of the card with buses showing
+let pendingStarStopId = null;
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function minsClass(mins) {
+  if (mins <= 5) return 'soon';
+  if (mins <= 15) return 'ok';
+  return 'later';
+}
+
+function minsLabel(mins) {
+  if (mins === 0) return 'now';
+  return mins + ' min';
+}
+
+function busRowHTML(bus) {
+  const cls = minsClass(bus.minutes_away);
+  const sourceBadge = (bus.source === 'approx' || bus.source === 'scheduled')
+    ? `<span class="bus-source ${escHtml(bus.source)}">${escHtml(bus.source)}</span>`
+    : '';
+  return `
+    <div class="bus-row">
+      <span class="bus-route">${escHtml(bus.route)}</span>
+      <span class="bus-time">${escHtml(bus.arrival_time)}</span>
+      ${sourceBadge}
+      <span class="bus-mins ${cls}">${minsLabel(bus.minutes_away)}</span>
+    </div>`;
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── View switching ─────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.view;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-' + target).classList.add('active');
+    if (target === 'home') {
+      loadStars();
+    }
+  });
+});
+
+// ── Home view ──────────────────────────────────────────────────────────────
+async function loadStars() {
+  try {
+    const res = await fetch('/stars');
+    stars = await res.json();
+  } catch {
+    stars = [];
+  }
+  renderStops();
+}
+
+function renderStops() {
+  const container = document.getElementById('stops-list');
+  if (!stars.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🚌</div>
+        <p>No saved stops yet.<br>
+        Use <strong>Search</strong> to find a stop<br>and star it.</p>
+      </div>`;
+    return;
+  }
+  container.innerHTML = stars.map(s => stopCardHTML(s)).join('');
+
+  // Attach events
+  container.querySelectorAll('.stop-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleStopTap(btn.dataset.stopId));
+  });
+  container.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleDelete(btn.dataset.stopId));
+  });
+
+  // Re-open previously open card
+  if (openCardId) {
+    const panel = document.getElementById('buses-' + openCardId);
+    if (panel) panel.classList.add('open');
+  }
+}
+
+function stopCardHTML(stop) {
+  return `
+    <div class="stop-card" id="card-${escHtml(stop.stop_id)}">
+      <div class="stop-card-header">
+        <button class="stop-btn" data-stop-id="${escHtml(stop.stop_id)}">
+          ${escHtml(stop.label)}
+        </button>
+        <span class="stop-id-badge">${escHtml(stop.stop_id)}</span>
+        <button class="delete-btn" data-stop-id="${escHtml(stop.stop_id)}" aria-label="Remove ${escHtml(stop.label)}">✕</button>
+      </div>
+      <div class="bus-results" id="buses-${escHtml(stop.stop_id)}">
+        <p class="bus-loading"><span class="spinner"></span>Loading…</p>
+      </div>
+    </div>`;
+}
+
+async function handleStopTap(stopId) {
+  const panel = document.getElementById('buses-' + stopId);
+  if (!panel) return;
+
+  // Toggle: tap same stop again to collapse
+  if (openCardId === stopId && panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    openCardId = null;
+    return;
+  }
+
+  // Collapse previously open panel
+  if (openCardId && openCardId !== stopId) {
+    const prev = document.getElementById('buses-' + openCardId);
+    if (prev) prev.classList.remove('open');
+  }
+
+  openCardId = stopId;
+  panel.classList.add('open');
+  panel.innerHTML = '<p class="bus-loading"><span class="spinner"></span>Loading…</p>';
+
+  try {
+    const res = await fetch('/next/' + encodeURIComponent(stopId));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Server error');
+
+    if (!data.buses || data.buses.length === 0) {
+      panel.innerHTML = '<p class="bus-empty">No upcoming buses found.</p>';
+    } else {
+      panel.innerHTML = data.buses.slice(0, 3).map(busRowHTML).join('');
+    }
+  } catch (err) {
+    panel.innerHTML = `<p class="bus-error">Could not load buses: ${escHtml(err.message)}</p>`;
+  }
+}
+
+async function handleDelete(stopId) {
+  if (!confirm('Remove this stop?')) return;
+  try {
+    await fetch('/stars/' + encodeURIComponent(stopId), { method: 'DELETE' });
+  } catch {
+    // best effort — reload regardless
+  }
+  if (openCardId === stopId) openCardId = null;
+  await loadStars();
+}
+
+// ── Search view ────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('search-input');
+const searchBtn   = document.getElementById('search-btn');
+const searchArea  = document.getElementById('search-results-area');
+
+searchBtn.addEventListener('click', runSearch);
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') runSearch();
+});
+
+async function runSearch() {
+  const stopId = searchInput.value.trim();
+  if (!stopId) return;
+
+  searchBtn.disabled = true;
+  searchArea.innerHTML = '<p class="bus-loading"><span class="spinner"></span>Looking up stop ' + escHtml(stopId) + '…</p>';
+
+  try {
+    const res = await fetch('/next/' + encodeURIComponent(stopId));
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Server error');
+
+    if (!data.buses || data.buses.length === 0) {
+      searchArea.innerHTML = renderSearchBox(stopId, []);
+    } else {
+      searchArea.innerHTML = renderSearchBox(stopId, data.buses);
+    }
+
+    // Attach star button event
+    const sb = document.getElementById('star-action-btn');
+    if (sb) {
+      sb.addEventListener('click', () => {
+        const isStarred = sb.classList.contains('starred');
+        if (!isStarred) openLabelPrompt(stopId);
+      });
+    }
+
+  } catch (err) {
+    if (err.message.toLowerCase().includes('not found') || err.message === '404') {
+      searchArea.innerHTML = '<p class="bus-error">Stop not found. Check the stop number and try again.</p>';
+    } else {
+      searchArea.innerHTML = '<p class="bus-error">Error: ' + escHtml(err.message) + '</p>';
+    }
+  } finally {
+    searchBtn.disabled = false;
+  }
+}
+
+function renderSearchBox(stopId, buses) {
+  const alreadyStarred = stars.some(s => s.stop_id === String(stopId));
+  const starLabel = alreadyStarred ? '★ Saved' : '☆ Save';
+  // Re-render bus rows cleanly inside the search box
+  const rowsHtml = buses.slice(0, 5).map(busRowHTML).map(h =>
+    h.trim().replace(/^<div class="bus-row">/, '<div class="bus-row" style="padding:10px 16px">')
+  ).join('');
+
+  return `
+    <div class="search-results">
+      <div class="search-header">
+        <span class="search-stop-id">Stop ${escHtml(stopId)}</span>
+        <button class="star-btn ${alreadyStarred ? 'starred' : ''}" id="star-action-btn"
+          ${alreadyStarred ? 'disabled aria-label="Already saved"' : 'aria-label="Save this stop"'}>
+          ${alreadyStarred ? '★ Saved' : '☆ Save'}
+        </button>
+      </div>
+      ${buses.length === 0
+        ? '<p class="bus-empty" style="padding:12px 16px">No upcoming buses at this stop.</p>'
+        : rowsHtml}
+    </div>`;
+}
+
+// ── Label prompt ───────────────────────────────────────────────────────────
+const overlay        = document.getElementById('label-overlay');
+const promptStopId   = document.getElementById('prompt-stop-id');
+const promptInput    = document.getElementById('prompt-label-input');
+const promptSave     = document.getElementById('prompt-save');
+const promptCancel   = document.getElementById('prompt-cancel');
+
+function openLabelPrompt(stopId) {
+  pendingStarStopId = stopId;
+  promptStopId.textContent = stopId;
+  promptInput.value = '';
+  promptSave.disabled = false;
+  overlay.classList.add('open');
+  setTimeout(() => promptInput.focus(), 50);
+}
+
+function closeLabelPrompt() {
+  overlay.classList.remove('open');
+  pendingStarStopId = null;
+}
+
+promptCancel.addEventListener('click', closeLabelPrompt);
+
+overlay.addEventListener('click', e => {
+  if (e.target === overlay) closeLabelPrompt();
+});
+
+promptInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSaveStar();
+  if (e.key === 'Escape') closeLabelPrompt();
+});
+
+promptSave.addEventListener('click', doSaveStar);
+
+async function doSaveStar() {
+  const label = promptInput.value.trim();
+  if (!label) {
+    promptInput.focus();
+    return;
+  }
+  const stopId = pendingStarStopId;
+  promptSave.disabled = true;
+
+  try {
+    const res = await fetch('/stars', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stop_id: stopId, label })
+    });
+    if (!res.ok) throw new Error('Save failed');
+
+    closeLabelPrompt();
+
+    // Switch to home view and reload
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelector('[data-view="home"]').classList.add('active');
+    document.getElementById('view-home').classList.add('active');
+    await loadStars();
+
+  } catch (err) {
+    alert('Could not save stop: ' + err.message);
+    promptSave.disabled = false;
+  }
+}
+
+// ── Settings view ──────────────────────────────────────────────────────────
+const apiKeyInput    = document.getElementById('api-key-input');
+const apiKeySaveBtn  = document.getElementById('api-key-save-btn');
+const keyStatus      = document.getElementById('key-status');
+const settingsFeedback = document.getElementById('settings-feedback');
+
+async function loadKeyStatus() {
+  try {
+    const res = await fetch('/settings');
+    const data = await res.json();
+    if (data.key_set) {
+      keyStatus.textContent = '🔑 API key saved ••••••••';
+    } else {
+      keyStatus.textContent = 'No API key saved yet.';
+    }
+  } catch {
+    keyStatus.textContent = '';
+  }
+}
+
+apiKeySaveBtn.addEventListener('click', saveApiKey);
+apiKeyInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveApiKey();
+});
+
+async function saveApiKey() {
+  const val = apiKeyInput.value.trim();
+  settingsFeedback.textContent = '';
+  settingsFeedback.className = '';
+
+  if (!val) {
+    settingsFeedback.textContent = 'Key cannot be blank.';
+    settingsFeedback.className = 'settings-err';
+    apiKeyInput.focus();
+    return;
+  }
+
+  apiKeySaveBtn.disabled = true;
+
+  try {
+    const res = await fetch('/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ translink_api_key: val })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      settingsFeedback.textContent = data.error || 'Save failed.';
+      settingsFeedback.className = 'settings-err';
+    } else {
+      apiKeyInput.value = '';
+      apiKeyInput.type = 'password';
+      settingsFeedback.textContent = '✓ API key saved.';
+      settingsFeedback.className = 'settings-ok';
+      keyStatus.textContent = '🔑 API key saved ••••••••';
+    }
+  } catch {
+    settingsFeedback.textContent = 'Network error — key not saved.';
+    settingsFeedback.className = 'settings-err';
+  } finally {
+    apiKeySaveBtn.disabled = false;
+  }
+}
+
+// ── GTFS update ────────────────────────────────────────────────────────────
+const gtfsUpdateBtn = document.getElementById('gtfs-update-btn');
+const gtfsStatus    = document.getElementById('gtfs-status');
+
+gtfsUpdateBtn.addEventListener('click', async () => {
+  gtfsUpdateBtn.disabled = true;
+  gtfsStatus.style.color = 'var(--text-dim)';
+  gtfsStatus.innerHTML = '<span class="spinner"></span>Checking for updates…';
+
+  try {
+    const res = await fetch('/check-gtfs-update', { method: 'POST' });
+    const data = await res.json();
+
+    if (!res.ok) {
+      gtfsStatus.style.color = 'var(--danger)';
+      gtfsStatus.textContent = 'Update failed' + (data.error ? ': ' + data.error : '');
+    } else {
+      switch (data.action) {
+        case 'downloaded':
+          gtfsStatus.style.color = 'var(--green)';
+          gtfsStatus.textContent = '✓ Updated to ' + escHtml(data.new_zip_date || 'new version');
+          break;
+        case 'already_current':
+          gtfsStatus.style.color = 'var(--text-dim)';
+          gtfsStatus.textContent = 'Already up to date';
+          break;
+        case 'not_found':
+          gtfsStatus.style.color = 'var(--text-dim)';
+          gtfsStatus.textContent = 'No GTFS update found';
+          break;
+        case 'error':
+          gtfsStatus.style.color = 'var(--danger)';
+          gtfsStatus.textContent = 'Update failed' + (data.error ? ': ' + escHtml(data.error) : '');
+          break;
+        default:
+          gtfsStatus.style.color = 'var(--text-dim)';
+          gtfsStatus.textContent = 'Unknown response: ' + escHtml(data.action || '');
+      }
+    }
+  } catch (err) {
+    gtfsStatus.style.color = 'var(--danger)';
+    gtfsStatus.textContent = 'Network error: ' + escHtml(err.message);
+  } finally {
+    gtfsUpdateBtn.disabled = false;
+  }
+});
+
+// Load key status when settings tab is activated
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  if (btn.dataset.view === 'settings') {
+    btn.addEventListener('click', () => {
+      loadKeyStatus();
+      settingsFeedback.textContent = '';
+      settingsFeedback.className = '';
+      gtfsStatus.textContent = '';
+      gtfsStatus.style.color = '';
+    });
+  }
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadStars();
+loadKeyStatus();
+</script>
+</body>
+</html>
