@@ -456,6 +456,31 @@
       cursor: not-allowed;
     }
 
+    /* ── Scan button ── */
+    .scan-btn {
+      width: 100%;
+      height: 48px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .scan-btn:active { background: var(--border); color: var(--text); }
+    .scan-btn.scanning { border-color: var(--accent); color: var(--accent); animation: pulse-scan 1s infinite; }
+    @keyframes pulse-scan {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.5; }
+    }
+
     /* ── Settings view ── */
     .settings-panel {
       padding: 4px 0;
@@ -487,19 +512,20 @@
       margin-bottom: 12px;
     }
 
-    #settings-feedback {
-      font-size: 14px;
-      min-height: 20px;
-    }
+    .settings-ok  { color: var(--green); }
+    .settings-err { color: var(--danger); }
 
-    .settings-ok   { color: var(--green); }
-    .settings-err  { color: var(--danger); }
-
-    #key-status {
+    .settings-status {
       font-size: 14px;
       color: var(--text-dim);
       margin-bottom: 14px;
       min-height: 20px;
+    }
+
+    .settings-feedback-line {
+      font-size: 14px;
+      min-height: 20px;
+      margin-bottom: 4px;
     }
 
     /* ── Loading spinner ── */
@@ -541,13 +567,14 @@
     <!-- SETTINGS VIEW -->
     <section id="view-settings" class="view">
       <div class="settings-panel">
-        <h2 class="settings-heading">TransLink API Key</h2>
-        <p class="settings-hint">Enter your API key from the TransLink developer portal. The key is stored in <code>.env</code> and used immediately.</p>
-        <div id="key-status"></div>
+
+        <h2 class="settings-heading">Transit API Key</h2>
+        <p class="settings-hint">API key for your GTFS Realtime feed, if your agency requires one. Stored in <code>.env</code> and applied immediately.</p>
+        <div id="transit-key-status" class="settings-status"></div>
         <div class="settings-form">
           <input
             class="search-input"
-            id="api-key-input"
+            id="transit-key-input"
             type="password"
             placeholder="Paste API key here"
             autocomplete="off"
@@ -555,18 +582,58 @@
             autocapitalize="off"
             spellcheck="false"
           >
-          <button class="search-btn" id="api-key-save-btn">Save</button>
+          <button class="search-btn" id="transit-key-save-btn">Save</button>
         </div>
-        <div id="settings-feedback" aria-live="polite"></div>
+        <div id="transit-key-feedback" class="settings-feedback-line" aria-live="polite"></div>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 28px 0 24px;">
+
+        <h2 class="settings-heading">GTFS Realtime URL</h2>
+        <p class="settings-hint">Your agency's GTFS Realtime feed URL. Use <code>{key}</code> where your API key should appear. Stored in <code>.env</code>.</p>
+        <div class="settings-form">
+          <input
+            class="search-input"
+            id="gtfs-url-input"
+            type="text"
+            placeholder="https://your-agency.ca/gtfsrealtime?apikey={key}"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          >
+          <button class="search-btn" id="gtfs-url-save-btn">Save</button>
+        </div>
+        <div id="gtfs-url-feedback" class="settings-feedback-line" aria-live="polite"></div>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 28px 0 24px;">
+
+        <h2 class="settings-heading">Gemini API Key (OCR)</h2>
+        <p class="settings-hint">Google Gemini API key — powers the camera scan feature. Free tier available at <a href="https://aistudio.google.com" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com</a>. Stored in <code>.env</code>.</p>
+        <div id="gemini-key-status" class="settings-status"></div>
+        <div class="settings-form">
+          <input
+            class="search-input"
+            id="gemini-key-input"
+            type="password"
+            placeholder="Paste Gemini API key here"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          >
+          <button class="search-btn" id="gemini-key-save-btn">Save</button>
+        </div>
+        <div id="gemini-key-feedback" class="settings-feedback-line" aria-live="polite"></div>
 
         <hr style="border: none; border-top: 1px solid var(--border); margin: 28px 0 24px;">
 
         <h2 class="settings-heading">GTFS Data</h2>
-        <p class="settings-hint">Check for a newer GTFS schedule from TransLink and update the local database if one is available.</p>
+        <p class="settings-hint">Check for a newer GTFS schedule and update the local database if one is available.</p>
         <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
           <button class="search-btn" id="gtfs-update-btn" style="height: 48px; padding: 0 20px;">Update GTFS Data</button>
           <span id="gtfs-status" aria-live="polite" style="font-size: 14px;"></span>
         </div>
+
       </div>
     </section>
 
@@ -584,6 +651,9 @@
         >
         <button class="search-btn" id="search-btn">Go</button>
       </div>
+      <button class="scan-btn" id="scan-btn">📷 Scan stop sign</button>
+      <input type="file" id="scan-file-input" accept="image/*" capture="environment" style="display:none">
+      <div id="scan-status" style="font-size:14px;color:var(--text-dim);min-height:20px;margin-bottom:8px;"></div>
       <div id="search-results-area"></div>
     </section>
 
@@ -906,69 +976,75 @@ async function doSaveStar() {
 }
 
 // ── Settings view ──────────────────────────────────────────────────────────
-const apiKeyInput    = document.getElementById('api-key-input');
-const apiKeySaveBtn  = document.getElementById('api-key-save-btn');
-const keyStatus      = document.getElementById('key-status');
-const settingsFeedback = document.getElementById('settings-feedback');
-
-async function loadKeyStatus() {
+async function loadSettings() {
   try {
     const res = await fetch('/settings');
     const data = await res.json();
-    if (data.key_set) {
-      keyStatus.textContent = '🔑 API key saved ••••••••';
-    } else {
-      keyStatus.textContent = 'No API key saved yet.';
-    }
+    document.getElementById('transit-key-status').textContent =
+      data.transit_key_set ? '🔑 API key saved ••••••••' : 'Not set';
+    const gtfsInput = document.getElementById('gtfs-url-input');
+    if (data.gtfs_url) gtfsInput.value = data.gtfs_url;
+    document.getElementById('gemini-key-status').textContent =
+      data.gemini_key_set ? '🔑 API key saved ••••••••' : 'Not set — camera scan disabled';
   } catch {
-    keyStatus.textContent = '';
+    // silent
   }
 }
 
-apiKeySaveBtn.addEventListener('click', saveApiKey);
-apiKeyInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveApiKey();
-});
+function makeSaveFn(inputId, feedbackId, bodyKey, statusId, statusText) {
+  return async function () {
+    const input    = document.getElementById(inputId);
+    const feedback = document.getElementById(feedbackId);
+    const val      = input.value.trim();
 
-async function saveApiKey() {
-  const val = apiKeyInput.value.trim();
-  settingsFeedback.textContent = '';
-  settingsFeedback.className = '';
+    feedback.textContent = '';
+    feedback.className   = 'settings-feedback-line';
 
-  if (!val) {
-    settingsFeedback.textContent = 'Key cannot be blank.';
-    settingsFeedback.className = 'settings-err';
-    apiKeyInput.focus();
-    return;
-  }
-
-  apiKeySaveBtn.disabled = true;
-
-  try {
-    const res = await fetch('/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ translink_api_key: val })
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      settingsFeedback.textContent = data.error || 'Save failed.';
-      settingsFeedback.className = 'settings-err';
-    } else {
-      apiKeyInput.value = '';
-      apiKeyInput.type = 'password';
-      settingsFeedback.textContent = '✓ API key saved.';
-      settingsFeedback.className = 'settings-ok';
-      keyStatus.textContent = '🔑 API key saved ••••••••';
+    if (!val) {
+      feedback.textContent = 'Cannot be blank.';
+      feedback.className   = 'settings-feedback-line settings-err';
+      input.focus();
+      return;
     }
-  } catch {
-    settingsFeedback.textContent = 'Network error — key not saved.';
-    settingsFeedback.className = 'settings-err';
-  } finally {
-    apiKeySaveBtn.disabled = false;
-  }
+
+    input.disabled = true;
+    try {
+      const res  = await fetch('/settings', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ [bodyKey]: val }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        feedback.textContent = data.error || 'Save failed.';
+        feedback.className   = 'settings-feedback-line settings-err';
+      } else {
+        input.value          = '';
+        feedback.textContent = '✓ Saved.';
+        feedback.className   = 'settings-feedback-line settings-ok';
+        if (statusId) document.getElementById(statusId).textContent = statusText;
+      }
+    } catch {
+      feedback.textContent = 'Network error — not saved.';
+      feedback.className   = 'settings-feedback-line settings-err';
+    } finally {
+      input.disabled = false;
+    }
+  };
 }
+
+const saveTransitKey = makeSaveFn('transit-key-input', 'transit-key-feedback', 'transit_api_key',   'transit-key-status', '🔑 API key saved ••••••••');
+const saveGtfsUrl    = makeSaveFn('gtfs-url-input',    'gtfs-url-feedback',    'gtfs_realtime_url', null,                 null);
+const saveGeminiKey  = makeSaveFn('gemini-key-input',  'gemini-key-feedback',  'gemini_api_key',    'gemini-key-status',  '🔑 API key saved ••••••••');
+
+document.getElementById('transit-key-save-btn').addEventListener('click', saveTransitKey);
+document.getElementById('transit-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveTransitKey(); });
+
+document.getElementById('gtfs-url-save-btn').addEventListener('click', saveGtfsUrl);
+document.getElementById('gtfs-url-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveGtfsUrl(); });
+
+document.getElementById('gemini-key-save-btn').addEventListener('click', saveGeminiKey);
+document.getElementById('gemini-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveGeminiKey(); });
 
 // ── GTFS update ────────────────────────────────────────────────────────────
 const gtfsUpdateBtn = document.getElementById('gtfs-update-btn');
@@ -1017,22 +1093,91 @@ gtfsUpdateBtn.addEventListener('click', async () => {
   }
 });
 
-// Load key status when settings tab is activated
+// Load settings when settings tab is activated
 document.querySelectorAll('.tab-btn').forEach(btn => {
   if (btn.dataset.view === 'settings') {
     btn.addEventListener('click', () => {
-      loadKeyStatus();
-      settingsFeedback.textContent = '';
-      settingsFeedback.className = '';
+      loadSettings();
+      ['transit-key-feedback', 'gtfs-url-feedback', 'gemini-key-feedback'].forEach(id => {
+        const el = document.getElementById(id);
+        el.textContent = '';
+        el.className   = 'settings-feedback-line';
+      });
       gtfsStatus.textContent = '';
       gtfsStatus.style.color = '';
     });
   }
 });
 
+// ── Camera scan ────────────────────────────────────────────────────────────
+const scanBtn       = document.getElementById('scan-btn');
+const scanFileInput = document.getElementById('scan-file-input');
+const scanStatus    = document.getElementById('scan-status');
+
+scanBtn.addEventListener('click', () => scanFileInput.click());
+
+scanFileInput.addEventListener('change', async function () {
+  const file = scanFileInput.files[0];
+  if (!file) return;
+
+  scanBtn.classList.add('scanning');
+  scanStatus.textContent = 'Reading stop sign…';
+
+  try {
+    const dataUrl  = await readFileAsDataUrl(file);
+    const mimeType = dataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
+    const base64   = dataUrl.split(',')[1];
+
+    const res = await fetch('/ocr', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ image: base64, mime_type: mimeType }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.stop_id) {
+      scanStatus.textContent = 'Could not read a stop number — try again or type it.';
+    } else {
+      scanStatus.textContent = '';
+      searchInput.value = data.stop_id;
+      runSearch();
+    }
+  } catch (err) {
+    scanStatus.textContent = 'Scan error: ' + err.message;
+  } finally {
+    scanBtn.classList.remove('scanning');
+    scanFileInput.value = '';
+  }
+});
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('Could not read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 loadStars();
 loadKeyStatus();
+
+// Auto-search if ?stop= query param is present (handoff from camera app)
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const stopParam = params.get('stop');
+  if (stopParam) {
+    // Switch to search tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelector('[data-view="search"]').classList.add('active');
+    document.getElementById('view-search').classList.add('active');
+    // Pre-fill and run
+    searchInput.value = stopParam;
+    runSearch();
+  }
+}());
 </script>
 </body>
 </html>

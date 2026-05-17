@@ -21,3 +21,7 @@ logs/
 
 # Scratch / prototype files
 poc.py
+qa_test.py
+
+# Test assets
+test images/

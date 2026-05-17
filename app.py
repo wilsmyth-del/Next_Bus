@@ -19,8 +19,9 @@ load_dotenv()
 
 app = Flask(__name__)
 
-TRANSLINK_API_KEY = os.getenv("TRANSLINK_API_KEY")
-FEED_URL = "https://gtfsapi.translink.ca/v3/gtfsrealtime?apikey={key}"
+TRANSIT_API_KEY = os.getenv("TRANSIT_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "stars.db")
 
@@ -70,10 +71,14 @@ init_db()
 
 
 def fetch_feed():
-    api_key = os.getenv("TRANSLINK_API_KEY")
-    if not api_key:
-        raise RuntimeError("TRANSLINK_API_KEY is not set")
-    url = FEED_URL.format(key=api_key)
+    feed_url = os.getenv("GTFS_REALTIME_URL", "https://gtfsapi.translink.ca/v3/gtfsrealtime?apikey={key}")
+    if "{key}" in feed_url:
+        api_key = os.getenv("TRANSIT_API_KEY")
+        if not api_key:
+            raise RuntimeError("TRANSIT_API_KEY is not set")
+        url = feed_url.format(key=api_key)
+    else:
+        url = feed_url
     response = requests.get(url, timeout=10)
     response.raise_for_status()
     feed = gtfs_realtime_pb2.FeedMessage()
@@ -380,6 +385,51 @@ def refresh_stops():
     })
 
 
+@app.route("/ocr", methods=["POST"])
+def ocr():
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return jsonify({"error": "OCR not configured — add GEMINI_API_KEY in Settings"}), 503
+
+    data = request.get_json()
+    if not data or "image" not in data:
+        return jsonify({"error": "No image provided"}), 400
+
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": (
+                    "Extract the bus stop number from this image. "
+                    "Return ONLY the numeric stop ID, nothing else. "
+                    "If you cannot read a stop number, return UNKNOWN."
+                )},
+                {"inline_data": {
+                    "mime_type": data.get("mime_type", "image/jpeg"),
+                    "data": data["image"],
+                }},
+            ]
+        }]
+    }
+
+    try:
+        resp = requests.post(
+            f"{GEMINI_URL}?key={api_key}",
+            json=payload,
+            timeout=30,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        raw = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception as e:
+        return jsonify({"error": f"OCR service error: {e}"}), 502
+
+    if not raw or raw.upper() == "UNKNOWN":
+        return jsonify({"stop_id": None})
+
+    digits = "".join(c for c in raw if c.isdigit())
+    return jsonify({"stop_id": digits or None})
+
+
 @app.route("/search")
 def search_stops():
     q = request.args.get("q", "").strip()
@@ -446,39 +496,61 @@ def delete_star(stop_id):
     return jsonify({"status": "ok"})
 
 
-@app.route("/settings", methods=["GET"])
-def get_settings():
-    key = os.getenv("TRANSLINK_API_KEY", "")
-    return jsonify({"key_set": bool(key.strip())})
-
-
-@app.route("/settings", methods=["POST"])
-def save_settings():
-    global TRANSLINK_API_KEY
-
-    body = request.get_json(silent=True) or {}
-    new_key = body.get("translink_api_key", "")
-
-    if not new_key or not new_key.strip():
-        return jsonify({"error": "API key cannot be blank"}), 400
-
-    new_key = new_key.strip()
-
+def _write_env_var(key, value):
     env_path = Path(os.path.dirname(__file__)) / ".env"
-    new_line = f"TRANSLINK_API_KEY={new_key}\n"
-
+    new_line = f"{key}={value}\n"
     if env_path.exists():
         content = env_path.read_text()
-        if re.search(r"^TRANSLINK_API_KEY=", content, re.MULTILINE):
-            content = re.sub(r"^TRANSLINK_API_KEY=.*$", f"TRANSLINK_API_KEY={new_key}", content, flags=re.MULTILINE)
+        if re.search(rf"^{re.escape(key)}=", content, re.MULTILINE):
+            content = re.sub(rf"^{re.escape(key)}=.*$", f"{key}={value}", content, flags=re.MULTILINE)
         else:
             content = content.rstrip("\n") + "\n" + new_line
         env_path.write_text(content)
     else:
         env_path.write_text(new_line)
+    os.environ[key] = value
 
-    os.environ["TRANSLINK_API_KEY"] = new_key
-    TRANSLINK_API_KEY = new_key
+
+@app.route("/settings", methods=["GET"])
+def get_settings():
+    transit_key = os.getenv("TRANSIT_API_KEY", "")
+    gtfs_url = os.getenv("GTFS_REALTIME_URL", "")
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    return jsonify({
+        "transit_key_set": bool(transit_key.strip()),
+        "gtfs_url": gtfs_url,
+        "gemini_key_set": bool(gemini_key.strip()),
+    })
+
+
+@app.route("/settings", methods=["POST"])
+def save_settings():
+    body = request.get_json(silent=True) or {}
+    saved = []
+
+    if "transit_api_key" in body:
+        val = (body["transit_api_key"] or "").strip()
+        if not val:
+            return jsonify({"error": "API key cannot be blank"}), 400
+        _write_env_var("TRANSIT_API_KEY", val)
+        saved.append("transit_api_key")
+
+    if "gtfs_realtime_url" in body:
+        val = (body["gtfs_realtime_url"] or "").strip()
+        if not val:
+            return jsonify({"error": "GTFS URL cannot be blank"}), 400
+        _write_env_var("GTFS_REALTIME_URL", val)
+        saved.append("gtfs_realtime_url")
+
+    if "gemini_api_key" in body:
+        val = (body["gemini_api_key"] or "").strip()
+        if not val:
+            return jsonify({"error": "API key cannot be blank"}), 400
+        _write_env_var("GEMINI_API_KEY", val)
+        saved.append("gemini_api_key")
+
+    if not saved:
+        return jsonify({"error": "Nothing to save"}), 400
 
     return jsonify({"status": "ok"})
 
