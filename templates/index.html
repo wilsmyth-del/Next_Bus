@@ -1124,14 +1124,13 @@ scanFileInput.addEventListener('change', async function () {
   scanStatus.textContent = 'Reading stop sign…';
 
   try {
-    const dataUrl  = await readFileAsDataUrl(file);
-    const mimeType = dataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
+    const dataUrl  = await resizeImage(file, 900);
     const base64   = dataUrl.split(',')[1];
 
     const res = await fetch('/ocr', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ image: base64, mime_type: mimeType }),
+      body:    JSON.stringify({ image: base64, mime_type: 'image/jpeg' }),
     });
     const data = await res.json();
 
@@ -1150,12 +1149,21 @@ scanFileInput.addEventListener('change', async function () {
   }
 });
 
-function readFileAsDataUrl(file) {
+function resizeImage(file, maxWidth = 900, quality = 0.82) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = e => resolve(e.target.result);
-    reader.onerror = () => reject(new Error('Could not read file'));
-    reader.readAsDataURL(file);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale  = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
+    img.src = url;
   });
 }
 
@@ -1178,6 +1186,10 @@ loadKeyStatus();
     runSearch();
   }
 }());
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js');
+}
 </script>
 </body>
 </html>
