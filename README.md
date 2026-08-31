@@ -1,5 +1,7 @@
 # Next Bus
 
+> **Legacy web implementation.** The current Android app is [next-bus-android](https://github.com/wilsmyth-del/next-bus-android).
+
 Checking the next bus used to take 15–20 taps — open the app, wait for it to load, find the stop, scroll through the schedule. This is one tap. You open it and your next buses are already there.
 
 That's the whole pitch.
@@ -40,8 +42,8 @@ This app is built on [GTFS](https://gtfs.org/) — the open standard used by tra
 **1. Clone the repo**
 
 ```bash
-git clone <repo-url>
-cd transit-server
+git clone https://github.com/wilsmyth-del/Next_Bus.git
+cd Next_Bus
 ```
 
 **2. Create a virtual environment and install dependencies**
